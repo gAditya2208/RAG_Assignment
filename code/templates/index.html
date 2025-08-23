@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>RAG Demo</title>
+    <style>
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-width: 90vw;
+            overflow-wrap: break-word;
+        }
+
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ask about Policy PDF</h1>
+    <form method="POST">
+        <textarea name="question" rows="3" cols="50" placeholder="Type your question here"></textarea><br>
+        <input type="submit" value="Ask">
+    </form>
+    <h2>Answer:</h2>
+    <pre>{{ answer }}</pre>
+</body>
+
+</html>

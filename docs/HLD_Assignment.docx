@@ -1,0 +1,157 @@
+Here is a detailed and well-structured High-Level Design (HLD) documentation draft for your RAG system assignment. You can save this as `HLD_Assignment.docx` or convert it to PDF:
+
+***
+
+# High-Level Design (HLD) Document  
+### RAG System: Retrieval-Augmented Generation for PDF Question Answering
+
+***
+
+## 1. Introduction
+
+This document describes the design, architecture, technologies, and implementation details of the Retrieval-Augmented Generation (RAG) system developed to answer questions from PDF documents with evidence citation. The system focuses on ingesting mixed PDFs, extracting and chunking text, embedding chunks using pre-trained models, indexing for fast retrieval, and optionally providing a web-based chat UI.
+
+***
+
+## 2. Architecture Diagram and Components
+
+The system consists of the following major components:
+
+```
+[PDF Document] 
+      ↓ Ingestion Pipeline
+[Text Extraction + OCR] → [Clean & Chunk Text] → [Embeddings] → [Vector Index (FAISS)] → [Retriever]
+      ↓                                               ↑
+(Optional Web UI for Chat Input) ←───────────── Query Processing and Answering
+```
+
+- **Ingestion Pipeline:** Processes PDF files to extract textual content, including scanned pages using OCR.
+- **Chunking:** Splits the large text into manageable chunks at sentence boundaries to preserve semantics without cutting words.
+- **Embeddings:** Converts textual chunks into vector representations using Sentence Transformers.
+- **Vector Index:** Efficient similarity search index built using FAISS to quickly retrieve relevant chunks.
+- **Retriever:** Matches user questions against the vector index to find the most relevant chunks as answers.
+- **Web UI (Optional):** Provides a chat interface powered by Flask where users input questions and receive answers with citations.
+
+***
+
+## 3. Technologies Used
+
+- **PyMuPDF:** For native PDF text extraction. Supports complex PDF structures.
+- **pytesseract:** OCR engine to extract text from scanned (image-based) PDF pages.
+- **pdf2image:** Converts PDF pages to images for OCR processing on scanned pages.
+- **Sentence Transformers:** Pre-trained models (`all-MiniLM-L6-v2`) to generate dense vector embeddings from text chunks.
+- **FAISS:** Facebook’s open-source library for efficient similarity search in large vector datasets.
+- **Flask:** Lightweight Python web framework to serve the optional chat interface.
+- **NLTK (Removed due to issues, replaced by custom splitter):** Initially used for sentence tokenization. Replaced with custom sentence splitter due to environment problems.
+
+***
+
+## 4. Pipeline Flow
+
+1. **PDF → Text Extraction/OCR**
+
+   - Load PDF pages using PyMuPDF.
+   - For pages without extractable text (scanned), convert page to image and run OCR with pytesseract.
+   - Combine extracted text from all pages.
+
+2. **Text Cleaning and Chunking**
+
+   - Clean extracted text by removing unwanted line breaks and hyphenations.
+   - Split text into sentence-based chunks without cutting sentences or words using a custom sentence splitter.
+
+3. **Embeddings Creation**
+
+   - Use the Sentence Transformer model to convert each chunk into a dense numerical vector.
+
+4. **Vector Index Building**
+
+   - Build a FAISS index on the chunk embeddings to enable efficient nearest neighbor search.
+
+5. **Query Retrieval and Answering**
+
+   - On receiving a user question, encode it as a vector.
+   - Use FAISS to retrieve top relevant text chunks.
+   - Return these chunks as the answer, showing evidence citations from the document.
+
+6. **Web UI Interaction**
+
+   - User submits a question via a web form.
+   - Backend processes the question through the retrieval pipeline.
+   - The answer is displayed on the web page, with text wrapping to avoid horizontal scrolling.
+
+***
+
+## 5. How to Run
+
+### Environment Setup
+
+1. Install Python 3.8 or higher.
+
+2. Create and activate a virtual environment:
+
+   ```
+   python -m venv env
+   # Windows
+   .\env\Scripts\activate
+   # macOS/Linux
+   source env/bin/activate
+   ```
+
+3. Install required packages:
+
+   ```
+   pip install PyMuPDF pytesseract pdf2image sentence_transformers faiss-cpu flask
+   ```
+
+4. Install Tesseract OCR on your system (separately) and ensure it is added to PATH.
+
+### Running Scripts
+
+- **Ingest PDF:** Run `ingest_pdf.py` to extract text from the PDF.
+- **Build Index:** Run `build_index.py` to chunk, embed, and index the extracted text.
+- **Start Web UI:** Run `app.py` to launch the local Flask web server.
+
+***
+
+## 6. Challenges and Testing
+
+### Challenges
+
+- Handling mixed PDFs with both native and scanned pages required implementing OCR fallback.
+- Environment issues with NLTK tokenizers led to replacing NLTK sentence splitter with a custom simple splitter to ensure stability.
+- Managing chunk size to preserve semantic meaning without breaking sentences.
+- Balancing retrieval speed and accuracy using FAISS indexing.
+
+### Testing
+
+- Tested PDF ingestion on multiple pages ensuring full text extraction and OCR quality.
+- Validated chunking by sampling chunks to confirm sentences were complete and properly segmented.
+- Verified embeddings and vector similarity retrieval by querying with known document content.
+- Tested Flask UI interaction by asking varied questions and confirming relevant answers showed.
+- Enhanced UI usability by adding CSS to prevent horizontal scrolling in answer display.
+
+***
+
+## 7. Code Snippet Example
+
+**Custom Sentence-Based Chunking Function:**
+
+```python
+def simple_sentence_split(text, max_chunk_size=500):
+    sentences = text.split('. ')
+    chunks = []
+    current_chunk = ""
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        sentence = sentence if sentence.endswith('.') else sentence + '.'
+        if len(current_chunk) + len(sentence) + 1 <= max_chunk_size:
+            current_chunk += (" " + sentence) if current_chunk else sentence
+        else:
+            chunks.append(current_chunk)
+            current_chunk = sentence
+    if current_chunk:
+        chunks.append(current_chunk)
+    return chunks
+```
